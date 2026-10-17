@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ระบบตารางเรียน หลักสูตรนายทหารอาวุโส รุ่นที่ 59</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;700&display=swap" rel="stylesheet">
+    <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js'></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <style>
+        body { font-family: 'Sarabun', sans-serif; background-color: #F0F8FF; }
+        :root {
+            --fc-button-bg-color: #4A90E2;
+            --fc-button-active-bg-color: #357ABD;
+            --fc-button-border-color: #4A90E2;
+            --fc-today-bg-color: rgba(230, 247, 255, 0.7);
+        }
+        .fc .fc-button-primary { background-color: var(--fc-button-bg-color); border-color: var(--fc-button-border-color); }
+        .fc .fc-button-primary:hover { background-color: var(--fc-button-active-bg-color); }
+        .fc-event { font-size: 0.85em; padding: 3px; color: white !important; cursor: pointer; }
+        .tab-button { transition: all 0.3s ease; border-bottom: 2px solid transparent; }
+        
+        .tab-director.active, .hover-director:hover { color: #3B82F6; border-bottom-color: #3B82F6; }
+        .fc-event.event-director { background-color: #3B82F6; border-color: #2563EB; }
+
+        .tab-hr.active, .hover-hr:hover { color: #10B981; border-bottom-color: #10B981; }
+        .fc-event.event-hr { background-color: #10B981; border-color: #059669; }
+
+        .tab-academic.active, .hover-academic:hover { color: #8B5CF6; border-bottom-color: #8B5CF6; }
+        .fc-event.event-academic { background-color: #8B5CF6; border-color: #7C3AED; }
+
+        .admin-panel { background-color: #E6F7FF; }
+        .btn-save { background-color: #4A90E2; color: white; transition: background-color 0.3s; }
+        .btn-save:hover { background-color: #357ABD; }
+        .btn-delete { background-color: #E53E3E; }
+        .btn-delete:hover { background-color: #C53030; }
+        .swal2-popup { font-family: 'Sarabun', sans-serif; }
+        .swal2-html-container { text-align: left !important; margin: 0 1.5rem !important; }
+
+        @media (max-width: 640px) {
+            .fc .fc-toolbar { flex-direction: column; gap: 8px; }
+            .fc .fc-toolbar-title { font-size: 1.1rem !important; }
+            .fc .fc-button { padding: 0.2rem 0.4rem !important; font-size: 0.75rem !important; }
+        }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800">
+
+    <!-- Login Modal -->
+    <div id="login-modal" class="fixed inset-0 bg-gray-800 bg-opacity-75 flex items-center justify-center z-50 hidden p-4">
+        <div class="bg-white p-6 sm:p-8 rounded-lg shadow-xl w-full max-w-sm">
+            <h2 class="text-2xl font-bold text-center text-blue-800 mb-6">เข้าสู่ระบบ (Admin)</h2>
+            <form id="login-form">
+                <div class="mb-4">
+                    <label for="username" class="block text-sm font-medium text-gray-700 mb-1">ชื่อผู้ใช้</label>
+                    <input type="text" id="username" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500" required>
+                </div>
+                <div class="mb-6">
+                    <label for="password" class="block text-sm font-medium text-gray-700 mb-1">รหัสผ่าน</label>
+                    <input type="password" id="password" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500" required>
+                </div>
+                <button type="submit" class="w-full btn-save py-2 px-6 font-semibold rounded-md shadow-sm">เข้าสู่ระบบ</button>
+            </form>
+        </div>
+    </div>
+
+    <div class="container mx-auto p-4 md:p-6 lg:p-8 max-w-7xl">
+        <header class="relative flex flex-col sm:flex-row justify-between items-center mb-6 gap-4 border-b pb-4">
+            <div class="text-center sm:text-left">
+                <h1 class="text-2xl md:text-3xl lg:text-4xl font-bold text-blue-800">ระบบตารางเรียนหลักสูตรนายทหารอาวุโส รุ่นที่ 59</h1>
+            </div>
+            
+            <div class="flex-shrink-0">
+                <button id="admin-login-btn" class="py-1.5 px-3 bg-gray-200 text-gray-700 text-xs sm:text-sm font-semibold rounded hover:bg-gray-300 transition">
+                    สำหรับผู้ดูแลระบบ
+                </button>
+                <button id="header-logout-btn" class="py-1.5 px-3 bg-red-600 text-white text-xs sm:text-sm font-semibold rounded hover:bg-red-700 transition hidden">
+                    ออกจากระบบ (Admin)
+                </button>
+            </div>
+        </header>
+
+        <!-- Tabs for filtering -->
+        <div class="mb-4 border-b border-gray-200 overflow-x-auto">
+            <nav class="flex justify-start sm:justify-center gap-2 sm:gap-4 md:gap-6 min-w-max pb-1" id="filter-tabs-container">
+            </nav>
+        </div>
+
+        <!-- Calendar Display -->
+        <div class="bg-white p-2 sm:p-4 md:p-6 rounded-lg shadow-md w-full overflow-hidden">
+            <div id='calendar' class="w-full"></div>
+        </div>
+
+        <!-- Admin Panel -->
+        <div id="admin-section" class="mt-8 p-4 sm:p-6 admin-panel rounded-lg shadow-md hidden">
+            <div class="flex justify-between items-center mb-6">
+                 <h2 class="text-xl sm:text-2xl font-bold text-blue-700">จัดการข้อมูล (Admin)</h2>
+                 <button id="logout-btn" class="text-sm text-red-600 hover:text-red-800 font-semibold py-1 px-3 rounded hover:bg-red-100 transition">ออกจากระบบ</button>
+            </div>
+            
+            <!-- Event Form -->
+            <form id="event-form" class="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+                <input type="hidden" id="eventId">
+                <div class="md:col-span-1"><label for="startDate" class="block text-sm font-medium">วันที่</label><input type="date" id="startDate" class="w-full mt-1 px-3 py-2 border border-gray-300 rounded-md" required></div>
+                <div class="md:col-span-1"><label for="endDate" class="block text-sm font-medium">ถึงวันที่</label><input type="date" id="endDate" class="w-full mt-1 px-3 py-2 border border-gray-300 rounded-md" required></div>
+                <div class="md:col-span-2"><label for="time" class="block text-sm font-medium">เวลา</label><input type="text" id="time" placeholder="เช่น 09:00-16:00" class="w-full mt-1 px-3 py-2 border border-gray-300 rounded-md"></div>
+                <div class="md:col-span-2"><label for="title" class="block text-sm font-medium">รายการ</label><input type="text" id="title" class="w-full mt-1 px-3 py-2 border border-gray-300 rounded-md" required></div>
+                <div class="md:col-span-2"><label for="location" class="block text-sm font-medium">สถานที่</label><input type="text" id="location" class="w-full mt-1 px-3 py-2 border border-gray-300 rounded-md"></div>
+                <div class="md:col-span-2"><label for="assignee" class="block text-sm font-medium">มอบหมาย (หมวดหมู่)</label><select id="assignee" class="w-full mt-1 px-3 py-2 border border-gray-300 rounded-md" required></select></div>
+                <div class="md:col-span-2"><label for="notes" class="block text-sm font-medium">หมายเหตุ</label><textarea id="notes" rows="3" class="w-full mt-1 px-3 py-2 border border-gray-300 rounded-md"></textarea></div>
+                <div class="md:col-span-2 flex flex-wrap items-center gap-3 pt-2">
+                    <button type="submit" id="save-btn" class="btn-save py-2 px-6 font-semibold rounded-md shadow-sm">บันทึกข้อมูล</button>
+                    <button type="button" id="clear-form-btn" class="py-2 px-4 font-medium text-gray-700 bg-white border rounded-md shadow-sm hover:bg-gray-50">ยกเลิก</button>
+                    <button type="button" id="delete-btn" class="btn-delete hidden py-2 px-6 font-semibold text-white rounded-md shadow-sm">ลบข้อมูล</button>
+                </div>
+            </form>
+
+            <!-- Admin Event List -->
+            <div class="mt-10">
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-4">
+                    <h3 class="text-lg sm:text-xl font-bold text-blue-700">รายการข้อมูลทั้งหมด</h3>
+                    <input type="text" id="search-input" placeholder="ค้นหารายการ..." class="w-full sm:w-auto sm:max-w-xs px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
+                </div>
+                <div class="bg-white rounded-lg shadow overflow-x-auto">
+                    <div id="admin-event-list" class="divide-y divide-gray-200 min-w-full">
+                    </div>
+                    <div class="p-4 text-center">
+                        <button id="show-more-btn" class="py-2 px-4 font-medium text-gray-700 bg-white border rounded-md shadow-sm hover:bg-gray-50 hidden">แสดงเพิ่มเติม</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer class="text-center py-6 mt-8 text-sm text-gray-500 border-t border-gray-200">
+        Copyright © 2026 ระบบตารางเรียนหลักสูตรนายทหารอาวุโส รุ่นที่ 59
+    </footer>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // ใส่ Web App URL ที่ได้จากขั้นตอนที่ 1
+    const GAS_URL = 'https://script.google.com/macros/s/AKfycbwmUpgAGGLjHzzgxw55NKGKZa3qg4G0qACNadQVnBx1L1NKft5Dm5sh0p1-ZvCUXHM_/exec';
+
+    let allEvents = [];
+    let currentFilter = 'ทั้งหมด';
+    let displayedItemsCount = 5;
+    const ITEMS_PER_PAGE = 5;
+    const allCategories = [
+        { name: 'กองการศึกษา', shortName: 'กองการศึกษา', colorClass: 'director' },
+        { name: 'กองการปกครอง', shortName: 'กองการปกครอง', colorClass: 'hr' },
+        { name: 'แจ้งการลา', shortName: 'แจ้งการลา', colorClass: 'academic' }
+    ];
+    let calendar;
+
+    const elements = {
+        loginModal: document.getElementById('login-modal'),
+        loginForm: document.getElementById('login-form'),
+        adminLoginBtn: document.getElementById('admin-login-btn'),
+        headerLogoutBtn: document.getElementById('header-logout-btn'),
+        logoutBtn: document.getElementById('logout-btn'),
+        adminSection: document.getElementById('admin-section'),
+        calendarEl: document.getElementById('calendar'),
+        eventForm: document.getElementById('event-form'),
+        eventId: document.getElementById('eventId'),
+        startDate: document.getElementById('startDate'),
+        endDate: document.getElementById('endDate'),
+        time: document.getElementById('time'),
+        title: document.getElementById('title'),
+        location: document.getElementById('location'),
+        assignee: document.getElementById('assignee'),
+        notes: document.getElementById('notes'),
+        deleteBtn: document.getElementById('delete-btn'),
+        clearFormBtn: document.getElementById('clear-form-btn'),
+        filterTabsContainer: document.getElementById('filter-tabs-container'),
+        adminEventList: document.getElementById('admin-event-list'),
+        searchInput: document.getElementById('search-input'),
+        showMoreBtn: document.getElementById('show-more-btn'),
+    };
+
+    function toPureYMD(inputStr) {
+        if (!inputStr) return '';
+        let s = String(inputStr).trim();
+        if (s.includes('T')) s = s.split('T')[0];
+        var m = s.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})/);
+        if (m) {
+            return m[1] + '-' + m[2].padStart(2, '0') + '-' + m[3].padStart(2, '0');
+        }
+        return s;
+    }
+
+    function addDaysYMD(ymdStr, days) {
+        var clean = toPureYMD(ymdStr);
+        if (!clean) return '';
+        var parts = clean.split('-');
+        var y = parseInt(parts[0], 10);
+        var m = parseInt(parts[1], 10) - 1;
+        var d = parseInt(parts[2], 10);
+        
+        var target = new Date(Date.UTC(y, m, d + days));
+        var resY = target.getUTCFullYear();
+        var resM = String(target.getUTCMonth() + 1).padStart(2, '0');
+        var resD = String(target.getUTCDate()).padStart(2, '0');
+        return resY + '-' + resM + '-' + resD;
+    }
+
+    function setAdminUIState(isLoggedIn) {
+        if (isLoggedIn) {
+            elements.adminSection.classList.remove('hidden');
+            elements.adminLoginBtn.classList.add('hidden');
+            elements.headerLogoutBtn.classList.remove('hidden');
+        } else {
+            elements.adminSection.classList.add('hidden');
+            elements.headerLogoutBtn.classList.add('hidden');
+            elements.adminLoginBtn.classList.remove('hidden');
+            document.getElementById('username').value = '';
+            document.getElementById('password').value = '';
+            clearEventForm();
+        }
+    }
+
+    function checkLoginStatus() {
+        const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
+        setAdminUIState(isLoggedIn);
+    }
+
+    function performLogout() {
+        localStorage.removeItem('isLoggedIn');
+        setAdminUIState(false);
+    }
+
+    elements.adminLoginBtn.addEventListener('click', () => elements.loginModal.classList.remove('hidden'));
+    elements.logoutBtn.addEventListener('click', performLogout);
+    elements.headerLogoutBtn.addEventListener('click', performLogout);
+
+    elements.loginForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        if (document.getElementById('username').value === 'snoc59a' && document.getElementById('password').value === '05102569') {
+            localStorage.setItem('isLoggedIn', 'true');
+            elements.loginModal.classList.add('hidden');
+            setAdminUIState(true);
+        } else {
+            Swal.fire({ icon: 'error', title: 'เข้าสู่ระบบไม่สำเร็จ', text: 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง' });
+        }
+    });
+
+    async function initializeApp() {
+        checkLoginStatus();
+        Swal.fire({ title: 'กำลังโหลดข้อมูล...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+        try {
+            renderDynamicUI();
+            initCalendar();
+            await reloadData();
+            setupAdminListListeners();
+            Swal.close();
+        } catch (error) {
+            console.error('Initialization error:', error);
+            Swal.fire({ icon: 'error', title: 'เกิดข้อผิดพลาด', text: 'ไม่สามารถโหลดข้อมูลเริ่มต้นได้: ' + error.message });
+        }
+    }
+
+    async function reloadData() {
+        allEvents = await fetchData();
+        renderCalendarEvents(allEvents);
+        renderAdminEventList();
+    }
+
+    async function fetchData() {
+        const response = await fetch(`${GAS_URL}?action=getData`);
+        if (!response.ok) throw new Error(`Failed to fetch events`);
+        const data = await response.json();
+        return Array.isArray(data) ? data : [];
+    }
+
+    function renderDynamicUI() {
+        renderTabs();
+        renderAssigneeDropdown();
+    }
+    
+    function renderTabs() {
+        let tabsHtml = '<button data-filter="ทั้งหมด" class="tab-button active py-2 px-3 sm:py-3 sm:px-4 text-sm sm:text-base font-medium text-gray-600 hover:text-blue-600">ทั้งหมด</button>';
+        allCategories.forEach(cat => {
+            if (cat.name) {
+                tabsHtml += `<button data-filter="${cat.name}" class="tab-button tab-${cat.colorClass} hover-${cat.colorClass} py-2 px-3 sm:py-3 sm:px-4 text-sm sm:text-base font-medium text-gray-600">${cat.shortName}</button>`;
+            }
+        });
+        elements.filterTabsContainer.innerHTML = tabsHtml;
+    }
+
+    function renderAssigneeDropdown() {
+        elements.assignee.innerHTML = allCategories
+            .filter(cat => cat.name)
+            .map(cat => `<option value="${cat.name}">${cat.name}</option>`)
+            .join('');
+    }
+
+    function initCalendar() {
+        calendar = new FullCalendar.Calendar(elements.calendarEl, {
+            locale: 'th',
+            initialView: 'dayGridMonth',
+            height: 'auto',
+            contentHeight: 'auto',
+            handleWindowResize: true,
+            windowResizeDelay: 100,
+            headerToolbar: { 
+                left: 'prev,next today', 
+                center: 'title', 
+                right: 'dayGridMonth,timeGridWeek,listWeek' 
+            },
+            events: [],
+            eventClick: handleEventClick,
+            selectable: true,
+            select: handleDateSelect,
+            windowResize: function() {
+                if (calendar) calendar.updateSize();
+            }
+        });
+        calendar.render();
+    }
+
+    function renderCalendarEvents(eventData) {
+        const filtered = (currentFilter === 'ทั้งหมด') ? eventData : eventData.filter(e => e.assignee === currentFilter);
+        const mappedEvents = filtered.map(item => {
+            const startYMD = toPureYMD(item.startDate);
+            const endYMD = toPureYMD(item.endDate || item.startDate);
+            
+            return {
+                id: String(item.id),
+                title: item.title,
+                start: startYMD,
+                end: addDaysYMD(endYMD, 1),
+                allDay: true,
+                className: getEventClass(item.assignee),
+                extendedProps: {
+                    time: item.time, location: item.location,
+                    assignee: item.assignee, notes: item.notes,
+                    realStart: startYMD,
+                    realEnd: endYMD
+                }
+            };
+        });
+
+        calendar.removeAllEvents();
+        calendar.addEventSource(mappedEvents);
+        calendar.updateSize();
+    }
+
+    function renderAdminEventList() {
+        const searchTerm = elements.searchInput.value.toLowerCase();
+        
+        const filteredEvents = !searchTerm
+            ? [...allEvents]
+            : allEvents.filter(event =>
+                (event.title && event.title.toLowerCase().includes(searchTerm)) ||
+                (event.location && event.location.toLowerCase().includes(searchTerm)) ||
+                (event.assignee && event.assignee.toLowerCase().includes(searchTerm))
+            );
+
+        const sortedEvents = filteredEvents.sort((a, b) => toPureYMD(b.startDate).localeCompare(toPureYMD(a.startDate)));
+        const itemsToShow = searchTerm ? sortedEvents : sortedEvents.slice(0, displayedItemsCount);
+
+        if (itemsToShow.length === 0) {
+            elements.adminEventList.innerHTML = `<p class="p-4 text-center text-gray-500">${searchTerm ? 'ไม่พบข้อมูลที่ตรงกัน' : 'ยังไม่มีข้อมูลในระบบ'}</p>`;
+        } else {
+            elements.adminEventList.innerHTML = itemsToShow.map(event => {
+                const sDate = toPureYMD(event.startDate);
+                const eDate = toPureYMD(event.endDate);
+                return `
+                <div class="p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 hover:bg-gray-50">
+                    <div class="flex-grow">
+                        <p class="font-bold text-gray-800">${event.title || 'ไม่มีชื่อรายการ'}</p>
+                        <p class="text-sm text-gray-600">${formatDateThai(sDate)}${eDate && sDate !== eDate ? ' - ' + formatDateThai(eDate) : ''}</p>
+                        <p class="text-sm text-gray-500">${event.assignee || 'ไม่มีหมวดหมู่'}</p>
+                    </div>
+                    <div class="flex-shrink-0 flex gap-2 mt-2 sm:mt-0">
+                        <button type="button" data-id="${event.id}" class="edit-event-btn py-1 px-3 text-sm font-semibold bg-yellow-400 text-yellow-900 rounded hover:bg-yellow-500 transition">แก้ไข</button>
+                        <button type="button" data-id="${event.id}" class="delete-event-btn py-1 px-3 text-sm font-semibold bg-red-500 text-white rounded hover:bg-red-600 transition">ลบ</button>
+                    </div>
+                </div>
+            `}).join('');
+        }
+
+        if (!searchTerm && displayedItemsCount < sortedEvents.length) {
+            elements.showMoreBtn.classList.remove('hidden');
+        } else {
+            elements.showMoreBtn.classList.add('hidden');
+        }
+    }
+
+    function handleEventClick(info) {
+        const { event } = info;
+        const props = event.extendedProps;
+
+        if (elements.adminSection.classList.contains('hidden')) {
+            const detailsHtml = `<div class="space-y-2 text-left">
+                <p><strong>วันที่:</strong> ${formatDateRange(props.realStart, props.realEnd)}</p>
+                ${props.time ? `<p><strong>เวลา:</strong> ${props.time}</p>` : ''}
+                ${props.location ? `<p><strong>สถานที่:</strong> ${props.location}</p>` : ''}
+                <p><strong>ผู้รับผิดชอบ:</strong> ${props.assignee}</p>
+                ${props.notes ? `<hr class="my-2"><p><strong>หมายเหตุ:</strong> ${props.notes}</p>` : ''}
+            </div>`;
+            Swal.fire({ title: `<strong class="text-xl">${event.title}</strong>`, html: detailsHtml, icon: 'info', confirmButtonText: 'ปิด' });
+        } else {
+            populateFormWithEventData(event.id);
+        }
+    }
+
+    function handleDateSelect(info) {
+        if (elements.adminSection.classList.contains('hidden')) return;
+        clearEventForm();
+        elements.startDate.value = info.startStr;
+        elements.endDate.value = addDaysYMD(info.endStr, -1);
+        elements.adminSection.scrollIntoView({ behavior: 'smooth' });
+    }
+
+    function setupAdminListListeners() {
+        elements.adminEventList.addEventListener('click', async (e) => {
+            const btn = e.target.closest('button');
+            if (!btn) return;
+
+            const eventId = btn.getAttribute('data-id');
+            if (!eventId) return;
+
+            if (btn.classList.contains('edit-event-btn')) {
+                populateFormWithEventData(eventId);
+            }
+
+            if (btn.classList.contains('delete-event-btn')) {
+                await deleteEventById(eventId);
+            }
+        });
+
+        elements.searchInput.addEventListener('input', () => {
+            displayedItemsCount = ITEMS_PER_PAGE;
+            renderAdminEventList();
+        });
+
+        elements.showMoreBtn.addEventListener('click', () => {
+            displayedItemsCount += ITEMS_PER_PAGE;
+            renderAdminEventList();
+        });
+    }
+
+    async function deleteEventById(eventId) {
+        const eventData = allEvents.find(ev => String(ev.id) === String(eventId));
+        const titleText = eventData ? `"${eventData.title}"` : 'กิจกรรมนี้';
+        
+        const result = await Swal.fire({ 
+            title: 'ยืนยันการลบ', 
+            text: `คุณต้องการลบ ${titleText} ใช่หรือไม่?`, 
+            icon: 'warning', 
+            showCancelButton: true, 
+            confirmButtonColor: '#d33', 
+            confirmButtonText: 'ใช่, ลบเลย!', 
+            cancelButtonText: 'ยกเลิก' 
+        });
+
+        if (result.isConfirmed) {
+            await postData({ id: eventId, action: 'delete' }, 'ลบข้อมูลสำเร็จ!');
+            await reloadData();
+            clearEventForm();
+        }
+    }
+
+    elements.eventForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const action = elements.eventId.value ? 'update' : 'add';
+        await postData({
+            id: elements.eventId.value,
+            action: action,
+            startDate: elements.startDate.value, 
+            endDate: elements.endDate.value, 
+            time: elements.time.value,
+            title: elements.title.value, 
+            location: elements.location.value, 
+            assignee: elements.assignee.value, 
+            notes: elements.notes.value,
+        }, 'บันทึกข้อมูลสำเร็จ!');
+        await reloadData();
+        clearEventForm();
+    });
+
+    elements.deleteBtn.addEventListener('click', async () => {
+        if (!elements.eventId.value) return;
+        await deleteEventById(elements.eventId.value);
+    });
+
+    async function postData(data, successTitle) {
+        Swal.fire({ title: 'กำลังดำเนินการ...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+        try {
+            const response = await fetch(GAS_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                body: JSON.stringify(data),
+            });
+            if (!response.ok) throw new Error(`เกิดข้อผิดพลาดจากเซิร์ฟเวอร์: ${response.statusText}`);
+            const result = await response.json();
+            if (result.status === 'success') {
+                await Swal.fire({ icon: 'success', title: successTitle, showConfirmButton: false, timer: 1500 });
+            } else {
+                throw new Error(result.message || 'เกิดข้อผิดพลาดที่ไม่รู้จักบนเซิร์ฟเวอร์');
+            }
+        } catch (error) {
+            console.error('Post error:', error);
+            Swal.fire({ icon: 'error', title: 'เกิดข้อผิดพลาด', text: 'ไม่สามารถบันทึกข้อมูลได้: ' + error.message });
+        }
+    }
+    
+    elements.filterTabsContainer.addEventListener('click', (e) => {
+        if (e.target.tagName === 'BUTTON') {
+            currentFilter = e.target.dataset.filter;
+            document.querySelectorAll('#filter-tabs-container .tab-button').forEach(btn => btn.classList.remove('active'));
+            e.target.classList.add('active');
+            renderCalendarEvents(allEvents);
+        }
+    });
+    
+    elements.clearFormBtn.addEventListener('click', clearEventForm);
+    
+    function clearEventForm() { 
+        elements.eventForm.reset(); 
+        elements.eventId.value = ''; 
+        elements.deleteBtn.classList.add('hidden'); 
+    }
+
+    function populateFormWithEventData(eventId) {
+        const eventData = allEvents.find(ev => String(ev.id) === String(eventId));
+        if (!eventData) return;
+        elements.eventId.value = eventData.id || '';
+        elements.startDate.value = toPureYMD(eventData.startDate) || '';
+        elements.endDate.value = toPureYMD(eventData.endDate) || '';
+        elements.time.value = eventData.time || '';
+        elements.title.value = eventData.title || '';
+        elements.location.value = eventData.location || '';
+        elements.assignee.value = eventData.assignee || '';
+        elements.notes.value = eventData.notes || '';
+        elements.deleteBtn.classList.remove('hidden');
+        elements.eventForm.scrollIntoView({ behavior: 'smooth' });
+    }
+
+    function getEventClass(assigneeName) {
+        const category = allCategories.find(c => c.name === assigneeName);
+        return category ? `event-${category.colorClass}` : '';
+    }
+
+    function formatDateRange(startStr, endStr) {
+        const sClean = toPureYMD(startStr);
+        const eClean = toPureYMD(endStr || startStr);
+        if(!sClean) return '';
+        
+        const opts = { year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC' };
+        
+        const sParts = sClean.split('-');
+        const fStart = new Date(Date.UTC(sParts[0], sParts[1] - 1, sParts[2])).toLocaleDateString('th-TH', opts);
+        
+        if (sClean === eClean) return fStart;
+        
+        const eParts = eClean.split('-');
+        const fEnd = new Date(Date.UTC(eParts[0], eParts[1] - 1, eParts[2])).toLocaleDateString('th-TH', opts);
+        return `${fStart} ถึง ${fEnd}`;
+    }
+
+    function formatDateThai(dateString) {
+        const clean = toPureYMD(dateString);
+        if (!clean) return '';
+        const parts = clean.split('-');
+        const d = new Date(Date.UTC(parts[0], parts[1] - 1, parts[2]));
+        return d.toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' });
+    }
+
+    initializeApp();
+});
+</script>
+
+</body>
+</html>
